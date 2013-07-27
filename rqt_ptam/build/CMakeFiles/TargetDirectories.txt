@@ -1,0 +1,16 @@
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/ROSBUILD_genmsg_cpp.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/ROSBUILD_genmsg_lisp.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/ROSBUILD_gensrv_cpp.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/ROSBUILD_gensrv_lisp.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/clean-test-results.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/rosbuild_precompile.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/rosbuild_premsgsrvgen.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/rospack_genmsg.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/rospack_genmsg_libexe.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/rospack_gensrv.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/rqt_ptam.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/test.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/test-future.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/test-results.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/test-results-run.dir
+/home/dev/ros/stacks/ethzasl_ptam/rqt_ptam/build/CMakeFiles/tests.dir

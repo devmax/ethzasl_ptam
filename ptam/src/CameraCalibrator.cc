@@ -15,6 +15,9 @@
 #include <ros/ros.h>
 #include <ros/package.h>
 
+#include <cv_bridge/cv_bridge.h>
+#include <opencv/cv.h>
+
 using namespace CVD;
 using namespace std;
 using namespace GVars3;
@@ -56,13 +59,30 @@ int main(int argc, char** argv)
 void CameraCalibrator::imageCallback(const sensor_msgs::ImageConstPtr & img)
 {
 
-  ROS_ASSERT(img->encoding == sensor_msgs::image_encodings::MONO8 && img->step == img->width);
+  //  ROS_ASSERT(img->encoding == sensor_msgs::image_encodings::MONO8 && img->step == img->width);
+  //  ROS_INFO("Step = %d, width = %d, height = %d",img->step,img->width,img->height);
 
-  CVD::ImageRef size(img->width, img->height);
-  mCurrentImage.resize(size);
+  //  ROS_ASSERT(img->step == img->width);
 
-  CVD::BasicImage<CVD::byte> img_tmp((CVD::byte *)&img->data[0], size);
-  CVD::copy(img_tmp, mCurrentImage);
+  cv::Mat imgBW;
+
+  if(img->encoding == sensor_msgs::image_encodings::RGB8)
+    {
+      cv::Mat imgColTmp = cv::Mat(img->height,img->width,CV_8UC3,(uchar*)img->data.data());
+      cv::cvtColor(imgColTmp,imgBW,CV_RGB2GRAY);
+    }
+  else if(img->encoding == sensor_msgs::image_encodings::MONO8)
+    imgBW = cv::Mat(img->height,img->width,CV_8U,(uchar*)img->data.data());
+  else
+    ROS_ASSERT(img->encoding == sensor_msgs::image_encodings::RGB8 || img->encoding == sensor_msgs::image_encodings::MONO8);
+
+  if(mCurrentImage.size().x != img->width || mCurrentImage.size().y != img->height)
+    mCurrentImage.resize(CVD::ImageRef(img->width,img->height));
+
+  memcpy(mCurrentImage.data(),imgBW.data,img->width * img->height);
+
+  //CVD::BasicImage<CVD::byte> img_tmp((CVD::byte *)&img->data[0], size);
+  //CVD::copy(img_tmp, mCurrentImage);
   mNewImage = true;
 }
 

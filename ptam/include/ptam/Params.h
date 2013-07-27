@@ -50,6 +50,7 @@ public:
   int GLWindowMenu_mgvnMenuTextOffset;
   int InitLevel;
   std::string parent_frame;
+  std::string output_frame;
   bool gui;
   void readFixParams();
 };

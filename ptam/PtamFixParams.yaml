@@ -1,6 +1,6 @@
 gui: True
-ImageSizeX: 640
-ImageSizeY: 480
+ImageSizeX: 360
+ImageSizeY: 640
 ARBuffer_width: 1200
 ARBuffer_height: 900
 WiggleScale: 0.1
@@ -22,20 +22,21 @@ GLWindowMenu_mgvnMenuTextOffset: 20
 InitLevel: 1
 MaxKFDistWiggleMult: 1
 MaxPatchesPerFrame: 300
-MaxKF: 15
-parent_frame: world
+MaxKF: 30
+parent_frame: /world
+output_frame: /ardrone_base_link
 TrackingQualityFoundPixels: 50
 UseKFPixelDist: True
 NoLevelZeroMapPoints: True
 FASTMethod: OAST16
 MaxStereoInitLoops: 4
-AutoInitPixel: 20
+AutoInitPixel: 25
 
-# --- bluefox - low distort lens  --- 
-Cam_fx: 0.795574
-Cam_fy: 1.25149
-Cam_cx: 0.50417
-Cam_cy: 0.51687
-Cam_s: 0.482014
+# --- ardrone 2.0 camera------
+Cam_fx: 0.782195
+Cam_fy: 1.39022
+Cam_cx: 0.500758
+Cam_cy: 0.521464
+Cam_s: 1.14188
 # -----------------------------------
 

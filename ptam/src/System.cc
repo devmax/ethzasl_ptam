@@ -30,6 +30,9 @@ System::System() :
   srvPC_ = nh_.advertiseService("pointcloud", &System::pointcloudservice,this);
   srvKF_ = nh_.advertiseService("keyframes", &System::keyframesservice,this);
 
+  tf_sub_ = new tf::TransformListener(nh_);
+  tf_pub_ = new tf::TransformBroadcaster();
+
   sub_imu_ = nh_.subscribe("imu", 100, &System::imuCallback, this);
   sub_kb_input_ = nh_.subscribe("key_pressed", 100, &System::keyboardCallback, this);
 
@@ -45,6 +48,8 @@ System::System() :
   image_transport::ImageTransport it(image_nh_);
   sub_image_ = it.subscribe(topic, 1, &System::imageCallback, this, image_transport::TransportHints("raw", ros::TransportHints().tcpNoDelay(true)));
   pub_preview_image_ = it.advertise("vslam/preview", 1);
+
+  inited = false;
 }
 
 
@@ -91,8 +96,20 @@ void System::imageCallback(const sensor_msgs::ImageConstPtr & img)
 {
   //	static ros::Time t = img->header.stamp;
 
+  //  ROS_ASSERT(img->step == img->width);
 
-  ROS_ASSERT(img->encoding == sensor_msgs::image_encodings::MONO8 && img->step == img->width);
+  cv::Mat imgBW;
+
+  if(img->encoding == sensor_msgs::image_encodings::RGB8)
+    {
+      cv::Mat imgColTmp = cv::Mat(img->height,img->width,CV_8UC3,(uchar*)img->data.data());
+      cv::cvtColor(imgColTmp,imgBW,CV_RGB2GRAY);
+    }
+  else if(img->encoding == sensor_msgs::image_encodings::MONO8)
+    imgBW = cv::Mat(img->height,img->width,CV_8U,(uchar*)img->data.data());
+  else
+    ROS_ASSERT(img->encoding == sensor_msgs::image_encodings::RGB8 || img->encoding == sensor_msgs::image_encodings::MONO8);
+
 
   const VarParams& varParams = PtamParameters::varparams();
 
@@ -121,7 +138,8 @@ void System::imageCallback(const sensor_msgs::ImageConstPtr & img)
 
 //  -------------------
   // TODO: avoid copy, by calling TrackFrame, with the ros image, because there is another copy inside TrackFrame
-  CVD::BasicImage<CVD::byte> img_tmp((CVD::byte *)&img->data[0], CVD::ImageRef(img->width, img->height));
+  //CVD::BasicImage<CVD::byte> img_tmp((CVD::byte *)&img->data[0], CVD::ImageRef(img->width, img->height));
+  CVD::BasicImage<CVD::byte> img_tmp(imgBW.data,CVD::ImageRef(img->width,img->height));
   CVD::copy(img_tmp, img_bw_);
 
   bool tracker_draw = false;
@@ -230,7 +248,7 @@ bool System::transformQuaternion(const std::string & target_frame, const std_msg
   q_in.quaternion = _q_in;
   try
   {
-    tf_sub_.transformQuaternion(target_frame, q_in, q_out);
+    tf_sub_->transformQuaternion(target_frame, q_in, q_out);
     quaternionToRotationMatrix(q_out.quaternion, r_out);
     return true;
   }
@@ -250,7 +268,7 @@ bool System::transformPoint(const std::string & target_frame, const std_msgs::He
   p_in.point = _p_in;
   try
   {
-    tf_sub_.transformPoint(target_frame, p_in, p_out);
+    tf_sub_->transformPoint(target_frame, p_in, p_out);
     _p_out[0] = p_out.point.x;
     _p_out[1] = p_out.point.y;
     _p_out[2] = p_out.point.z;
@@ -289,13 +307,31 @@ void System::publishPoseAndInfo(const std_msgs::Header & header)
   if (mpTracker->getTrackingQuality() && mpMap->IsGood())
   {
     TooN::SE3<double> pose = mpTracker->GetCurrentPose();
-    //world in the camera frame
+    //world in the output frame
     TooN::Matrix<3, 3, double> r_ptam = pose.get_rotation().get_matrix();
+
     TooN::Vector<3, double> t_ptam =  pose.get_translation();
 
-    tf::StampedTransform transform_ptam(tf::Transform(tf::Matrix3x3(r_ptam(0, 0), r_ptam(0, 1), r_ptam(0, 2), r_ptam(1, 0), r_ptam(1, 1), r_ptam(1, 2), r_ptam(2, 0), r_ptam(2, 1), r_ptam(2, 2))
-    , tf::Vector3(t_ptam[0] / scale, t_ptam[1] / scale, t_ptam[2] / scale)), header.stamp, frame_id, PtamParameters::fixparams().parent_frame);
+    if(!inited)
+      {
+	try
+	  {
+	    tf_sub_->waitForTransform(PtamParameters::fixparams().output_frame,frame_id,header.stamp,ros::Duration(1.0));
+	    tf_sub_->lookupTransform(PtamParameters::fixparams().output_frame,frame_id,header.stamp,outputToCam);
 
+	    inited = true;
+	  }
+	catch(tf::TransformException ex)
+	  {
+	    ROS_ERROR("%s",ex.what());
+	  }
+      }
+
+    tf::StampedTransform transform_ptam((outputToCam * tf::Transform(tf::Matrix3x3(r_ptam(0, 0), r_ptam(0, 1), r_ptam(0, 2), r_ptam(1, 0), r_ptam(1, 1), r_ptam(1, 2), r_ptam(2, 0), r_ptam(2, 1), r_ptam(2, 2))
+						       , tf::Vector3(t_ptam[0] / scale, t_ptam[1] / scale, t_ptam[2] / scale))), header.stamp, outputToCam.frame_id_, PtamParameters::fixparams().parent_frame);
+
+    tf_pub_->sendTransform(transform_ptam);
+    /*
     //camera in the world frame
     TooN::Matrix<3, 3, double> r_world = pose.get_rotation().get_matrix().T();
     TooN::Vector<3, double> t_world =  - r_world * pose.get_translation();
@@ -303,11 +339,11 @@ void System::publishPoseAndInfo(const std_msgs::Header & header)
     tf::StampedTransform transform_world(tf::Transform(tf::Matrix3x3(r_world(0, 0), r_world(0, 1), r_world(0, 2), r_world(1, 0), r_world(1, 1), r_world(1, 2), r_world(2, 0), r_world(2, 1), r_world(2, 2))
         , tf::Vector3(t_world[0] / scale, t_world[1] / scale, t_world[2] / scale)), header.stamp, PtamParameters::fixparams().parent_frame, frame_id);
 
-    tf_pub_.sendTransform(transform_world);
-
+    tf_pub_->sendTransform(transform_world);
+    */
     if (pub_pose_.getNumSubscribers() > 0 || pub_pose_world_.getNumSubscribers() > 0)
     {
-      //world in the camera frame
+      //world in the output frame
       geometry_msgs::PoseWithCovarianceStampedPtr msg_pose(new geometry_msgs::PoseWithCovarianceStamped);
       const tf::Quaternion & q_tf_ptam = transform_ptam.getRotation();
       const tf::Vector3 & t_tf_ptam = transform_ptam.getOrigin();
@@ -323,13 +359,14 @@ void System::publishPoseAndInfo(const std_msgs::Header & header)
       for (unsigned int i = 0; i < msg_pose->pose.covariance.size(); i++)
         msg_pose->pose.covariance[i] = sqrt(fabs(covar[i % 6][i / 6]));
 
-      msg_pose->header = header;
+      msg_pose->header.stamp = header.stamp;
+      msg_pose->header.frame_id = outputToCam.frame_id_;
       pub_pose_.publish(msg_pose);
 
-
+      /*
       //camera in the world frame
-      const tf::Quaternion & q_tf_world = transform_ptam.getRotation();
-      const tf::Vector3 & t_tf_world = transform_ptam.getOrigin();
+      const tf::Quaternion & q_tf_world = transform_world.getRotation();
+      const tf::Vector3 & t_tf_world = transform_world.getOrigin();
       msg_pose->pose.pose.orientation.w = q_tf_world.w();
       msg_pose->pose.pose.orientation.x = q_tf_world.x();
       msg_pose->pose.pose.orientation.y = q_tf_world.y();
@@ -348,7 +385,7 @@ void System::publishPoseAndInfo(const std_msgs::Header & header)
         msg_pose->pose.covariance[i] = sqrt(fabs(covar_world[i % 6][i / 6]));
 
       pub_pose_world_.publish(msg_pose);
-
+      */
     }
 
     if (pub_info_.getNumSubscribers() > 0)

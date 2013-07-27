@@ -57,8 +57,8 @@ private:
   ros::Subscriber sub_imu_;
   ros::Subscriber sub_calibration_;
   ros::Subscriber sub_kb_input_;
-  tf::TransformBroadcaster tf_pub_;
-  tf::TransformListener tf_sub_;
+  tf::TransformBroadcaster *tf_pub_;
+  tf::TransformListener *tf_sub_;
   image_transport::Subscriber sub_image_;
   image_transport::Publisher pub_preview_image_;
   ros::Publisher pub_pose_;             // world in the camera frame
@@ -68,6 +68,9 @@ private:
   ros::ServiceServer srvKF_;
 
   ros::CallbackQueue image_queue_;
+
+  tf::StampedTransform outputToCam;
+  bool inited;
 
   ImuQueue imu_msgs_;
 
