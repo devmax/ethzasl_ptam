@@ -24,7 +24,7 @@ MaxKFDistWiggleMult: 1
 MaxPatchesPerFrame: 300
 MaxKF: 30
 parent_frame: /world
-output_frame: /ardrone_base_link
+output_frame: /ardrone_base_frontcam
 TrackingQualityFoundPixels: 50
 UseKFPixelDist: True
 NoLevelZeroMapPoints: True
